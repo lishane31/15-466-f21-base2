@@ -41,5 +41,6 @@ struct PlayMode : Mode {
 	Scene::Camera *camera = nullptr;
 
     std::vector< Scene::Transform* > asteroids;
-
+    int count = 0;
+    int hp = 5;
 };

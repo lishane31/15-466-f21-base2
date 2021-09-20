@@ -26,7 +26,6 @@ Load< MeshBuffer > city_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 
 Load< Scene > city_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("city.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-        cout << mesh_name << endl;
         if(mesh_name.compare("Asteroid") != 0) {
             Mesh const &mesh = city_meshes->lookup(mesh_name);
 
@@ -81,7 +80,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			SDL_SetRelativeMouseMode(SDL_FALSE);
 			return true;
 		} else if (evt.key.keysym.sym == SDLK_a) {
-            cout << "p" << endl;
 			left.downs += 1;
 			left.pressed = true;
             left.vel = vel;
@@ -141,7 +139,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 static bool spawn = true;
 void PlayMode::update(float elapsed) {
-
 	// //slowly rotates through [0,1):
 	// wobble += elapsed / 10.0f;
 	// wobble -= std::floor(wobble);
@@ -162,20 +159,26 @@ void PlayMode::update(float elapsed) {
     if(spawn) {
         cout << "Spawned" << endl;
         spawn = false;
-        Mesh const &mesh = city_meshes->lookup("Asteroid");
 
-        Scene::Transform* transform = new Scene::Transform();
-        transform->position = glm::vec3(0, 0, 100);
-		scene.drawables.emplace_back(transform);
-        asteroids.emplace_back(transform);
-		Scene::Drawable &drawable = scene.drawables.back();
+        for(int i = 0; i < 3; i++) {
+            Mesh const &mesh = city_meshes->lookup("Asteroid");
 
-		drawable.pipeline = lit_color_texture_program_pipeline;
+            Scene::Transform* transform = new Scene::Transform();
+            transform->position = glm::vec3(-25 + i * 25, 40, 0);
+            scene.drawables.emplace_back(transform);
+            asteroids.emplace_back(transform);
+            Scene::Drawable &drawable = scene.drawables.back();
 
-		drawable.pipeline.vao = city_meshes_for_lit_color_texture_program;
-		drawable.pipeline.type = mesh.type;
-		drawable.pipeline.start = mesh.start;
-		drawable.pipeline.count = mesh.count;
+            drawable.pipeline = lit_color_texture_program_pipeline;
+
+            drawable.pipeline.vao = city_meshes_for_lit_color_texture_program;
+            drawable.pipeline.type = mesh.type;
+            drawable.pipeline.start = mesh.start;
+            drawable.pipeline.count = mesh.count;
+            count++;
+        }
+        
+        
     }
 
 	//move camera:
@@ -220,8 +223,7 @@ void PlayMode::update(float elapsed) {
 		//glm::vec3 up = frame[1];
 		glm::vec3 forwardVec = -frame[2];
 
-        cout << to_string(forwardVec) << endl;
-
+        //make the player fall if no movement is being done
         glm::vec3 &camPos = camera->transform->position;
 		camPos += move.x * rightVec + move.y * forwardVec;
         if(left.vel == 0 && right.vel == 0 && forward.vel == 0 && back.vel == 0) {
@@ -236,12 +238,23 @@ void PlayMode::update(float elapsed) {
 	}
 
     //check collision
-    for(Scene::Transform* asteroid : asteroids) {
-        const glm::vec3 &pos = asteroid->position;
+    for(size_t i = 0; i < asteroids.size(); i++) {
+        const glm::vec3 &pos = asteroids[i]->position;
         const glm::vec3 &camPos = camera->transform->position;
         if( pos.x + 1 >= camPos.x && pos.x - 1 <= camPos.x
             && pos.y + 1 >= camPos.y && pos.y - 1 <= camPos.y
             && pos.z + 1 >= camPos.z && pos.z - 1 <= camPos.z) {
+                cout << scene.drawables.size() << " " << count << " " << scene.drawables.size() - count + i << endl;
+
+                //remove from asteroids and drawables
+                asteroids.erase(asteroids.begin() + i);
+                auto iter = scene.drawables.begin();
+                std::advance(iter, scene.drawables.size() - count + i);
+                scene.drawables.erase(iter);
+
+                hp--;
+                i--;
+                count--;
                 cout << to_string(pos) << " " << to_string(camPos) << endl;
         }
     }
