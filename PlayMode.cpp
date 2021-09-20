@@ -122,7 +122,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 	return false;
 }
 
-static bool spawn = true;
 void PlayMode::update(float elapsed) {
 	if(hp <= 0) return;
 
