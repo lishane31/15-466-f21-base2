@@ -43,4 +43,9 @@ struct PlayMode : Mode {
     std::vector< Scene::Transform* > asteroids;
     int count = 0;
     int hp = 5;
+    float timer = 5.0f;
+    float spawn = 5.0f;
+    float score = 0.0f;
+
+    std::vector< glm::vec3 > destinations;
 };

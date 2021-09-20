@@ -42,27 +42,7 @@ Load< Scene > city_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-
-
 PlayMode::PlayMode() : scene(*city_scene) {
-	// //get pointers to leg for convenience:
-	// for (auto &transform : scene.transforms) {
-	// 	if (transform.name == "Hip.FL") hip = &transform;
-	// 	else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-	// 	else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
-	// }
-	// if (hip == nullptr) throw std::runtime_error("Hip not found.");
-	// if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-	// if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
-
-	// hip_base_rotation = hip->rotation;
-	// upper_leg_base_rotation = upper_leg->rotation;
-	// lower_leg_base_rotation = lower_leg->rotation;
-
-	//get pointer to camera for convenience:
-	//if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
-    
-
 	camera = &scene.cameras.front();
     camera->transform->position = glm::vec3(0,5,0);
     camera->transform->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -74,12 +54,17 @@ PlayMode::~PlayMode() {
 }
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
+    if (evt.type == SDL_KEYDOWN) {
+        if (evt.key.keysym.sym == SDLK_ESCAPE) {
+            SDL_SetRelativeMouseMode(SDL_FALSE);
+            return true;
+        } 
+    }
+    if(hp <= 0) return false;
+
     const float vel = 0.005f;
 	if (evt.type == SDL_KEYDOWN) {
-		if (evt.key.keysym.sym == SDLK_ESCAPE) {
-			SDL_SetRelativeMouseMode(SDL_FALSE);
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_a) {
+        if (evt.key.keysym.sym == SDLK_a) {
 			left.downs += 1;
 			left.pressed = true;
             left.vel = vel;
@@ -139,32 +124,32 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 static bool spawn = true;
 void PlayMode::update(float elapsed) {
-	// //slowly rotates through [0,1):
-	// wobble += elapsed / 10.0f;
-	// wobble -= std::floor(wobble);
+    if(hp <= 0) return;
 
-	// hip->rotation = hip_base_rotation * glm::angleAxis(
-	// 	glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 1.0f, 0.0f)
-	// );
-	// upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-	// 	glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 0.0f, 1.0f)
-	// );
-	// lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-	// 	glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 0.0f, 1.0f)
-	// );
+    static std::mt19937 mt; //mersenne twister pseudo-random number generator
 
-    if(spawn) {
-        cout << "Spawned" << endl;
-        spawn = false;
+    constexpr float PlayerSpeed = 30.0f;
+
+    //game gets faster as time progresses
+    score += elapsed;
+    spawn -= elapsed;
+    if(timer > 0.5) timer -= elapsed * 0.075f;
+    cout << timer << endl;
+
+    //spawn an asteroid
+    if(spawn <= 0) {
+        spawn = timer;
 
         for(int i = 0; i < 3; i++) {
+            glm::vec3 origin = glm::vec3(-25.0f + i * 25.0f, 75.0f, -25.0f + i * 25.0f);
             Mesh const &mesh = city_meshes->lookup("Asteroid");
 
             Scene::Transform* transform = new Scene::Transform();
-            transform->position = glm::vec3(-25 + i * 25, 40, 0);
+            transform->position = origin;
+            destinations.emplace_back((float)(mt() % 100) - 50, -50, (float)(mt() % 100) - 50);
+            cout << "Spawned asteroid towards " << to_string(destinations.back()) << endl;
+
+            //tell the pipeline to draw the new asteroid
             scene.drawables.emplace_back(transform);
             asteroids.emplace_back(transform);
             Scene::Drawable &drawable = scene.drawables.back();
@@ -177,14 +162,11 @@ void PlayMode::update(float elapsed) {
             drawable.pipeline.count = mesh.count;
             count++;
         }
-        
-        
     }
 
 	//move camera:
 	{
 		//combine inputs into a move:
-		constexpr float PlayerSpeed = 30.0f;
 		glm::vec2 move = glm::vec2(0.0f);
 
         //cout << "A" <<  left.vel << " " << right.vel << " " << forward.vel << " " << back.vel << endl;
@@ -237,28 +219,66 @@ void PlayMode::update(float elapsed) {
         //cout << to_string(camera->transform->position) << endl;
 	}
 
-    //check collision
-    for(size_t i = 0; i < asteroids.size(); i++) {
-        const glm::vec3 &pos = asteroids[i]->position;
-        const glm::vec3 &camPos = camera->transform->position;
-        if( pos.x + 1 >= camPos.x && pos.x - 1 <= camPos.x
-            && pos.y + 1 >= camPos.y && pos.y - 1 <= camPos.y
-            && pos.z + 1 >= camPos.z && pos.z - 1 <= camPos.z) {
-                cout << scene.drawables.size() << " " << count << " " << scene.drawables.size() - count + i << endl;
+    {
+        for(size_t i = 0; i < asteroids.size(); i++) {
+            glm::vec3 &pos = asteroids[i]->position;
+            glm::vec3 &camPos = camera->transform->position;
 
-                //remove from asteroids and drawables
+            //check player collision
+            if( pos.x + 2 >= camPos.x && pos.x - 2 <= camPos.x
+                && pos.y + 2 >= camPos.y && pos.y - 2 <= camPos.y
+                && pos.z + 2 >= camPos.z && pos.z - 2 <= camPos.z) {
+                    cout << "Destroyed asteroid " << i << endl;
+
+                    //remove from asteroids, drawables, and destination
+                    asteroids.erase(asteroids.begin() + i);
+
+                    auto scene_iter = scene.drawables.begin();
+                    std::advance(scene_iter, scene.drawables.size() - count + i);
+                    scene.drawables.erase(scene_iter);
+
+                    auto dest_iter = destinations.begin();
+                    std::advance(dest_iter, i);
+                    destinations.erase(dest_iter);
+
+                    hp--;
+                    i--;
+                    count--;
+            }
+            //check if the asteroid is out of bounds
+            else if(pos.x > 49 || pos.x < -49
+                    || pos.y < -49
+                    || pos.z > 49 || pos.z < -49) {
+                cout << "Destroyed asteroid " << i << endl;
+
+                //remove from asteroids, drawables, and destination
                 asteroids.erase(asteroids.begin() + i);
-                auto iter = scene.drawables.begin();
-                std::advance(iter, scene.drawables.size() - count + i);
-                scene.drawables.erase(iter);
 
-                hp--;
+                auto scene_iter = scene.drawables.begin();
+                std::advance(scene_iter, scene.drawables.size() - count + i);
+                scene.drawables.erase(scene_iter);
+                
+                auto dest_iter = destinations.begin();
+                std::advance(dest_iter, i);
+                destinations.erase(dest_iter);
+
                 i--;
                 count--;
-                cout << to_string(pos) << " " << to_string(camPos) << endl;
+            }
+            //no collision, move the asteroid
+            else {
+                pos += destinations[i] * PlayerSpeed * elapsed * (score * 0.05f)/ 100.0f;
+
+                //give it some great looking rotations ;)
+                asteroids[i]->rotation = glm::normalize(
+                    asteroids[i]->rotation
+                    * glm::angleAxis(elapsed * (score * 0.05f) * (mt() % 5), glm::vec3(0.0f, 1.0f, 0.0f))
+                    * glm::angleAxis(elapsed * (score * 0.05f) * (mt() % 5), glm::vec3(1.0f, 0.0f, 0.0f))
+                );
+            }
         }
     }
-
+    
 	//reset button press counters:
 	left.downs = 0;
 	right.downs = 0;
@@ -300,12 +320,12 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		));
 
 		constexpr float H = 0.09f;
-		lines.draw_text(to_string(camera->transform->position),
+		lines.draw_text("Your hp is: " + to_string(hp) + " Your score is: " + to_string(score),
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text(to_string(camera->transform->position),
+		lines.draw_text("Your hp is: " + to_string(hp) + " Your score is: " + to_string(score),
 			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));

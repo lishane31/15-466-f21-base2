@@ -1,8 +1,9 @@
-# (TODO: your game's title)
+# I only know how to make asteroid games :(
 
-Author: (TODO: your name)
+Author: Siheng Li
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: You are an astronaut stuck in a cube and there are asteroids falling down.
+Avoid the falling rocks in low gravity.
 
 Screen Shot:
 
@@ -10,9 +11,12 @@ Screen Shot:
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+WASD to move and dodge the rocks.
 
-Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
+Sources:
+ city.blend (modified) -- Jim McCann
+ the asteroid was made by me :D (I'm pretty proud of it)
+ Code taken from past and current games
 
 This game was built with [NEST](NEST.md).
 
