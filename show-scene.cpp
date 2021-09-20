@@ -13,6 +13,8 @@
 #include <memory>
 #include <algorithm>
 
+using namespace std;
+
 int main(int argc, char **argv) {
 #ifdef _WIN32
 	//when compiled on windows, unhandled exceptions don't have their message printed, which can make debugging simple issues difficult.

@@ -22,7 +22,8 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} left, right, down, up;
+        float vel = 0;
+	} left, right, forward, back;
 
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
@@ -38,5 +39,7 @@ struct PlayMode : Mode {
 	
 	//camera:
 	Scene::Camera *camera = nullptr;
+
+    std::vector< Scene::Transform* > asteroids;
 
 };

@@ -1,13 +1,21 @@
 
-BLENDER="C:\Program Files\Blender Foundation\Blender 2.90\blender.exe"
+BLENDER="D:\Blender\blender.exe"
 DIST=../dist
 
 all : \
     $(DIST)/hexapod.pnct \
     $(DIST)/hexapod.scene \
+    $(DIST)/city.pnct \
+    $(DIST)/city.scene \
 
 $(DIST)/hexapod.scene : hexapod.blend export-scene.py
     $(BLENDER) --background --python export-scene.py -- "hexapod.blend:Main" "$(DIST)/hexapod.scene"
 
+$(DIST)/city.scene: city.blend export-scene.py
+    $(BLENDER) --background --python export-scene.py -- "city.blend" "$(DIST)/city.scene"
+
 $(DIST)/hexapod.pnct : hexapod.blend export-meshes.py
-    $(BLENDER) --background --python export-meshes.py -- "hexapod.blend:Main" "$(DIST)/hexapod.pnct" 
+    $(BLENDER) --background --python export-meshes.py -- "hexapod.blend:Main" "$(DIST)/hexapod.pnct"
+
+$(DIST)/city.pnct : city.blend export-meshes.py
+    $(BLENDER) --background --python export-meshes.py -- "city.blend" "$(DIST)/city.pnct" 
