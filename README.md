@@ -14,9 +14,9 @@ How To Play:
 WASD to move and dodge the rocks.
 
 Sources:
- city.blend (modified) -- Jim McCann
- the asteroid was made by me :D (I'm pretty proud of it)
- Code taken from past and current games
+city.blend (modified) -- Jim McCann
+the asteroid was made by me :D (I'm pretty proud of it)
+Code taken from past and current games
 
 This game was built with [NEST](NEST.md).
 
